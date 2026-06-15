@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   Filter,
@@ -18,6 +18,7 @@ import {
   Briefcase,
   Calendar,
   FileText,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -38,6 +39,7 @@ const statusOptions: { value: EmployeeStatus | 'all'; label: string }[] = [
 ];
 
 export default function EmployeeList() {
+  const navigate = useNavigate();
   const employees = useAppStore(s => s.employees);
   const selectedIds = useAppStore(s => s.selectedEmployeeIds);
   const toggleSelect = useAppStore(s => s.toggleSelectEmployee);
@@ -60,6 +62,8 @@ export default function EmployeeList() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [showBulkRemind, setShowBulkRemind] = useState(false);
+  const [remindResult, setRemindResult] = useState<{ count: number; total: number } | null>(null);
   const [newEmp, setNewEmp] = useState<Partial<Employee> & { onboardDate?: string; expectedDate?: string }>({});
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
@@ -97,7 +101,16 @@ export default function EmployeeList() {
       showToast('存在同名同手机号员工，请确认', 'warning');
       return;
     }
-    addEmployee(newEmp);
+
+    const payload: any = { ...newEmp };
+    if (newEmp.onboardDate || newEmp.expectedDate) {
+      const dateStr = newEmp.onboardDate || newEmp.expectedDate;
+      const parsed = dateStr ? new Date(dateStr) : new Date();
+      payload.onboardDate = parsed;
+      payload.expectedDate = parsed;
+    }
+
+    addEmployee(payload);
     showToast('添加成功', 'success');
     setShowAddModal(false);
     setNewEmp({});
@@ -119,10 +132,11 @@ export default function EmployeeList() {
     clearSelected();
   };
 
-  const handleBatchRemind = () => {
+  const handleBatchRemind = async () => {
     if (selectedIds.length === 0) return;
-    const count = sendBatchReminders(selectedIds, ReminderType.FOLLOW_UP);
-    showToast(`已生成${count}条催交通知，可在提醒中心查看`, 'success');
+    const count = await sendBatchReminders(selectedIds, ReminderType.FOLLOW_UP);
+    setRemindResult({ count, total: selectedIds.length });
+    setShowBulkRemind(true);
   };
 
   const handleCopySubmitLink = (emp: Employee) => {
@@ -497,6 +511,42 @@ export default function EmployeeList() {
             <p className="text-sm text-neutral-500 mt-1">包括他们的所有关联数据将全部清除，不可恢复。</p>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={showBulkRemind}
+        onClose={() => { setShowBulkRemind(false); setRemindResult(null); clearSelected(); }}
+        title="批量催交完成"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => { setShowBulkRemind(false); setRemindResult(null); clearSelected(); }}
+              className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+            >关闭</button>
+            <button
+              onClick={() => { setShowBulkRemind(false); setRemindResult(null); clearSelected(); navigate('/reminders'); }}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            >查看提醒中心</button>
+          </>
+        }
+      >
+        {remindResult && (
+          <div className="py-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success-100 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-success-600" />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-lg font-semibold text-neutral-800">催交通知已生成</p>
+              <p className="text-sm text-neutral-600">
+                已为 <span className="font-bold text-primary-600">{remindResult.count}</span> / {remindResult.total} 名员工生成催交通知
+              </p>
+              <p className="text-xs text-neutral-500 mt-2">
+                通知已发送至提醒中心，可查看详细记录或复制链接发送给员工
+              </p>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

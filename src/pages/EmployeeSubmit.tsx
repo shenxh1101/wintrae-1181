@@ -90,6 +90,12 @@ export default function EmployeeSubmit() {
   }, [materialRecords]);
 
   const handleFileUpload = async (templateId: string, file: File) => {
+    const template = templates.find((t) => t.id === templateId);
+    if (template?.hasExpiry && !expiryDates[templateId]) {
+      error('请先填写证件有效期后再上传');
+      return;
+    }
+
     setUploadingId(templateId);
     try {
       const base64 = await fileToBase64(file);

@@ -301,6 +301,9 @@ export const useAppStore = create<AppState>()(
 
         const records = createMaterialRecordsForEmployee(empId, templates);
 
+        const rawDate = (data as any).onboardDate ?? data.expectedDate;
+        const parsedDate = rawDate ? new Date(rawDate) : new Date();
+
         const newEmployee: Employee = {
           id: empId,
           submitToken: token,
@@ -310,7 +313,8 @@ export const useAppStore = create<AppState>()(
           idCard: data.idCard,
           position: data.position || '',
           department: data.department || '',
-          expectedDate: data.expectedDate ? new Date(data.expectedDate) : new Date(),
+          expectedDate: parsedDate,
+          onboardDate: parsedDate,
           remark: data.remark,
           exceptionNote: data.exceptionNote,
           status: EmployeeStatus.PENDING,
@@ -338,6 +342,9 @@ export const useAppStore = create<AppState>()(
           const token = generateToken();
           const records = createMaterialRecordsForEmployee(empId, templates);
 
+          const rawDate = (data as any).onboardDate ?? data.expectedDate;
+          const parsedDate = rawDate ? new Date(rawDate) : new Date();
+
           const newEmployee: Employee = {
             id: empId,
             submitToken: token,
@@ -347,8 +354,10 @@ export const useAppStore = create<AppState>()(
             idCard: data.idCard,
             position: data.position || '',
             department: data.department || '',
-            expectedDate: data.expectedDate ? new Date(data.expectedDate) : new Date(),
+            expectedDate: parsedDate,
+            onboardDate: parsedDate,
             remark: data.remark,
+            exceptionNote: data.exceptionNote,
             status: EmployeeStatus.PENDING,
             createdAt: now,
             updatedAt: now,

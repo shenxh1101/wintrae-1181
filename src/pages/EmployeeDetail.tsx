@@ -157,7 +157,7 @@ export default function EmployeeDetail() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-white/80">
                 <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {employee.department}</span>
-                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> 入职日期：{formatDate(employee.onboardDate)}</span>
+                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> 入职日期：{formatDate(employee.onboardDate || employee.expectedDate)}</span>
                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {maskPhone(employee.phone)}</span>
                 <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {employee.email || '-'}</span>
                 <span className="flex items-center gap-1.5 md:col-span-2"><User className="w-3.5 h-3.5" /> 身份证：{maskIdCard(employee.idCard)}</span>
@@ -253,7 +253,7 @@ export default function EmployeeDetail() {
                               <Star className="w-2.5 h-2.5" /> 必填
                             </span>
                           )}
-                          {record && <StatusBadge status={record.status} type="material" className="!py-0.5" />}
+                          <StatusBadge status={record.status} type="material" className="!py-0.5" />
                         </div>
                         {record.fileName && (
                           <div className="mt-2 flex items-center gap-3 text-xs text-neutral-600 flex-wrap">

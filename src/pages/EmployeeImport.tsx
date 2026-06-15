@@ -81,7 +81,7 @@ export default function EmployeeImport() {
     if (!data.department) {
       errors.push('部门不能为空');
     }
-    if (!data.onboardDate) {
+    if (!data.onboardDate && !(data as any).expectedDate) {
       errors.push('入职日期不能为空');
     }
 
@@ -99,6 +99,49 @@ export default function EmployeeImport() {
       warnings,
       isDuplicate,
     };
+  };
+
+  const parseDate = (value: any): Date | null => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    
+    let dateStr = String(value).trim();
+    
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        const year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+        dateStr = `${year}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+      }
+    } else if (dateStr.includes('年') && dateStr.includes('月') && dateStr.includes('日')) {
+      dateStr = dateStr.replace(/年|月/g, '-').replace('日', '');
+    }
+    
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+    return null;
+  };
+
+  const checkIntraBatchDuplicates = (rows: ImportPreviewRow[]): ImportPreviewRow[] => {
+    return rows.map((row, idx) => {
+      const hasBatchDuplicate = rows.some((other, otherIdx) => {
+        if (idx === otherIdx) return false;
+        const sameNamePhone = row.data.name === other.data.name && row.data.phone === other.data.phone;
+        const sameIdCard = row.data.idCard && other.data.idCard && row.data.idCard === other.data.idCard;
+        return sameNamePhone || sameIdCard;
+      });
+      
+      if (hasBatchDuplicate && !row.warnings.includes('导入表格内存在重复人员，请确认')) {
+        return {
+          ...row,
+          warnings: [...row.warnings, '导入表格内存在重复人员，请确认'],
+          isDuplicate: true,
+        };
+      }
+      return row;
+    });
   };
 
   const processFile = (file: File) => {
@@ -138,14 +181,11 @@ export default function EmployeeImport() {
             }
           });
 
-          const dateField = (empData as any).onboardDate || (empData as any).expectedDate;
-          if (dateField && typeof dateField === 'string' && dateField.includes('/')) {
-            const parts = dateField.split('/');
-            if (parts.length === 3) {
-              const normalized = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-              (empData as any).onboardDate = normalized;
-              (empData as any).expectedDate = normalized;
-            }
+          const rawDate = (empData as any).onboardDate || (empData as any).expectedDate;
+          const parsedDate = parseDate(rawDate);
+          if (parsedDate) {
+            (empData as any).onboardDate = parsedDate;
+            (empData as any).expectedDate = parsedDate;
           }
 
           rows.push(validateRow(empData, i, employees));
@@ -156,9 +196,11 @@ export default function EmployeeImport() {
           return;
         }
 
-        setPreviewRows(rows);
+        const rowsWithDupCheck = checkIntraBatchDuplicates(rows);
+
+        setPreviewRows(rowsWithDupCheck);
         setStep('preview');
-        showToast(`成功解析 ${rows.length} 条数据`, 'success');
+        showToast(`成功解析 ${rowsWithDupCheck.length} 条数据`, 'success');
       } catch (err) {
         console.error(err);
         showToast('文件解析失败，请检查格式', 'error');
@@ -204,7 +246,16 @@ export default function EmployeeImport() {
     setImporting(true);
     await new Promise(r => setTimeout(r, 800));
 
-    const result = addEmployees(toImport.map(r => r.data));
+    const importData = toImport.map(r => {
+      const parsedDate = parseDate(r.data.onboardDate ?? (r.data as any).expectedDate);
+      return {
+        ...r.data,
+        onboardDate: parsedDate || undefined,
+        expectedDate: parsedDate || undefined,
+      };
+    });
+
+    const result = addEmployees(importData);
     setImportedCount(result.length);
     setImporting(false);
     setStep('complete');

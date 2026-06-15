@@ -55,7 +55,8 @@ export default function DataExport() {
     { key: 'createdAt', label: '创建时间', icon: Calendar },
     { key: 'progress', label: '完成进度', icon: FileCheck },
     { key: 'missingMaterials', label: '缺失材料', icon: FileCheck },
-    { key: 'remark', label: '异常备注', icon: Info },
+    { key: 'remark', label: '备注', icon: Info },
+    { key: 'exceptionNote', label: '异常备注', icon: Info },
   ];
 
   const toggleField = (key: string) => {
@@ -154,6 +155,8 @@ export default function DataExport() {
               return missing.length > 0 ? missing.map((m) => m.name).join('、') : '无';
             case 'remark':
               return emp.remark || '-';
+            case 'exceptionNote':
+              return emp.exceptionNote || '-';
             default:
               return '-';
           }
@@ -227,7 +230,8 @@ export default function DataExport() {
 
 📈 完成率：${statistics.completionRate}%
 ⚠️  即将到期：${statistics.expiringSoon} 项
-📋 异常备注：${employees.filter((e) => e.remark).length} 条
+📋 备注：${employees.filter((e) => e.remark).length} 条
+⚠️  异常备注：${employees.filter((e) => e.exceptionNote).length} 条
 
 ═══════════════════════════════════════════
 `.trim();
